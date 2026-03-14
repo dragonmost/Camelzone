@@ -2,7 +2,7 @@
 
 ## Design goals
 
-- Keep v1 narrow and reliable (Amazon Canada desktop only)
+- Keep v1 narrow and reliable (Amazon Canada and US desktop only)
 - Avoid false ASIN detection from unrelated page widgets
 - Ensure the button updates cleanly during dynamic page navigation
 
@@ -48,3 +48,7 @@ To add another Amazon marketplace later:
 2. Add host mapping in `MARKETPLACE_CONFIG`.
 3. Test ASIN extraction and button placement on that domain.
 4. Confirm Camel host target for the new marketplace.
+
+Current mapped marketplaces:
+- `amazon.ca` -> `ca.camelcamelcamel.com`
+- `amazon.com` -> `camelcamelcamel.com`

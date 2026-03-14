@@ -9,6 +9,7 @@
 
 1. Product page with `/dp/` URL
    - Example: `https://www.amazon.ca/dp/<ASIN>`
+   - Example: `https://www.amazon.com/dp/<ASIN>`
    - Expected: one Camel button appears and opens matching Camel product URL
 2. Product page with `/gp/product/` URL
    - Expected: one Camel button appears with same ASIN behavior
@@ -22,8 +23,12 @@
 6. Product variant changes on same page
    - Expected: if ASIN changes, button link updates
 7. Unsupported host check
-   - Example: `amazon.com` while script scope remains CA-only
+   - Example: `amazon.co.uk`
    - Expected: no injection from this script metadata scope
+
+8. Marketplace routing check
+   - Example: open one `amazon.ca` product and one `amazon.com` product
+   - Expected: Canada links use `ca.camelcamelcamel.com`; US links use `camelcamelcamel.com`
 
 ## Logging checks
 

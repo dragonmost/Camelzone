@@ -4,10 +4,10 @@ Tampermonkey userscript tools for Amazon product workflows.
 
 ## Current project
 
-`userscript/amazon-camel-link.user.js` adds a button to Amazon Canada product pages that opens the matching CamelCamelCamel product history page.
+`userscript/amazon-camel-link.user.js` adds a button to Amazon product pages that opens the matching CamelCamelCamel product history page.
 
 Version 1 scope:
-- Supports desktop Amazon Canada pages (`amazon.ca` and `www.amazon.ca`)
+- Supports desktop Amazon Canada and US pages (`amazon.ca`, `www.amazon.ca`, `amazon.com`, and `www.amazon.com`)
 - Injects one button per product page
 - Uses layered ASIN extraction with validation
 - Includes verbose debug logs in browser console
@@ -19,16 +19,20 @@ Version 1 scope:
 3. Create a new script.
 4. Replace template content with the script from `userscript/amazon-camel-link.user.js`.
 5. Save.
-6. Visit an Amazon.ca product page and confirm the button appears.
+6. Visit an Amazon.ca or Amazon.com product page and confirm the button appears.
 
 ## How it works
 
-- Detects supported marketplace host (v1: `amazon.ca`)
+- Detects supported marketplace host (v1: `amazon.ca` and `amazon.com`)
 - Extracts ASIN from URL path, canonical URL, query params, then DOM fallbacks
 - Builds Camel URL in the form:
 
 ```text
-https://ca.camelcamelcamel.com/product/<ASIN>
+https://{market}.camelcamelcamel.com/product/<ASIN>
+
+Where `{market}` is:
+- `ca` for Amazon Canada
+- empty (root host) for Amazon US (`camelcamelcamel.com`)
 ```
 
 - Inserts an idempotent button near the buy box, with fallback placement near title/center content
