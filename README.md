@@ -1,15 +1,16 @@
-# cameltools
+# Camelzone
 
 Tampermonkey userscript tools for Amazon product workflows.
 
 ## Current project
 
-`userscript/amazon-camel-link.user.js` adds a button to Amazon product pages that opens the matching CamelCamelCamel product history page.
+`userscript/amazon-camel-link.user.js` adds a button to Amazon product pages that opens the matching CamelCamelCamel product history page and shows lowest price highlights.
 
 Version 1 scope:
 - Supports desktop Amazon Canada and US pages (`amazon.ca`, `www.amazon.ca`, `amazon.com`, and `www.amazon.com`)
 - Injects one button per product page
 - Uses layered ASIN extraction with validation
+- Fetches and displays best historical Amazon and 3rd-party-new prices from CamelCamelCamel
 - Includes verbose debug logs in browser console
 
 ## Install
@@ -29,13 +30,15 @@ Version 1 scope:
 
 ```text
 https://{market}.camelcamelcamel.com/product/<ASIN>
+```
 
 Where `{market}` is:
 - `ca` for Amazon Canada
 - empty (root host) for Amazon US (`camelcamelcamel.com`)
-```
-
 - Inserts an idempotent button near the buy box, with fallback placement near title/center content
+- Fetches Camel page stats and shows:
+	- `Best Amazon`
+	- `Best 3rd party new`
 - Re-evaluates on DOM mutations and history navigation changes
 
 ## Future domain support
@@ -53,4 +56,4 @@ When adding a domain, update:
 
 - Mobile domains are intentionally excluded in v1.
 - Non-product pages should not display the button.
-- Debug logs are prefixed with `[CamelTools]`.
+- Debug logs are prefixed with `[Camelzone]`.

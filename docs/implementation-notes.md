@@ -41,6 +41,16 @@ Amazon may update content without full page reload. The script re-checks page st
 
 Checks are debounced to avoid excessive work during rapid DOM updates.
 
+## Camel lowest-price enrichment
+
+- After ASIN resolution, the script fetches the Camel product page and extracts lowest-price values.
+- Displayed fields:
+   - Best Amazon
+   - Best 3rd party new
+- Cross-origin fetch uses Tampermonkey `GM_xmlhttpRequest` with `@connect` permissions.
+- Lowest-price results are cached per Camel product URL to reduce repeated requests during DOM churn.
+- Request IDs prevent stale async responses from overwriting newer in-page navigation state.
+
 ## Domain expansion path
 
 To add another Amazon marketplace later:

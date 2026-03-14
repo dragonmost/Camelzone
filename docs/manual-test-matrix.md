@@ -29,11 +29,18 @@
 8. Marketplace routing check
    - Example: open one `amazon.ca` product and one `amazon.com` product
    - Expected: Canada links use `ca.camelcamelcamel.com`; US links use `camelcamelcamel.com`
+9. Lowest price fields load
+   - On a supported product page, wait for Camel fetch to complete
+   - Expected: `Best Amazon` and `Best 3rd party new` show price values or `unavailable`
+10. Lowest price fields update on in-site navigation
+   - Navigate from product A to product B without full reload
+   - Expected: both lowest price rows update for the new ASIN and do not duplicate
 
 ## Logging checks
 
-- Console should include verbose logs prefixed with `[CamelTools]`.
+- Console should include verbose logs prefixed with `[Camelzone]`.
 - No unhandled errors during repeated navigation.
+- On Camel fetch failure or timeout, logs should indicate lowest price fetch failure without breaking the button.
 
 ## Regression checks
 

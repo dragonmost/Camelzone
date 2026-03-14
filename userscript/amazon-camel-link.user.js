@@ -1,24 +1,28 @@
 // ==UserScript==
-// @name         Amazon CamelCamelCamel Link
-// @namespace    https://github.com/Baker/cameltools
-// @version      0.2.0
+// @name         Camelzone
+// @namespace    https://github.com/Dragonmost/Camelzone
+// @version      0.3.0
 // @description  Adds a CamelCamelCamel button on Amazon product pages.
-// @author       Baker
+// @author       Dragonmost
 // @match        https://www.amazon.ca/*
 // @match        https://amazon.ca/*
 // @match        https://www.amazon.com/*
 // @match        https://amazon.com/*
+// @connect      camelcamelcamel.com
+// @connect      *.camelcamelcamel.com
 // @run-at       document-idle
-// @grant        none
+// @grant        GM_xmlhttpRequest
 // ==/UserScript==
 
 (function () {
   "use strict";
 
-  const DEBUG = true;
+  const DEBUG = false;
   const ROOT_ID = "ccc-link-root";
   const LINK_ID = "ccc-link-anchor";
   const SOURCE_ID = "ccc-link-source";
+  const AMAZON_PRICE_ID = "ccc-lowest-amazon";
+  const THIRD_PARTY_PRICE_ID = "ccc-lowest-third-party-new";
   const EVALUATE_DEBOUNCE_MS = 150;
 
   // Keep this table ready for future marketplace additions.
@@ -33,13 +37,15 @@
 
   let evaluateTimer = null;
   let observer = null;
+  let currentPriceRequestId = 0;
+  const priceCache = new Map();
 
   function log(...args) {
     if (!DEBUG) {
       return;
     }
 
-    console.log("[CamelTools]", ...args);
+    console.log("[Camelzone]", ...args);
   }
 
   function normalizeHost(hostname) {
@@ -211,6 +217,142 @@
     return `https://${camelHost}/product/${asin}`;
   }
 
+  function normalizeWhitespace(value) {
+    return String(value || "").replace(/\s+/g, " ").trim();
+  }
+
+  function extractCurrencyPrice(text) {
+    const input = normalizeWhitespace(text);
+    if (!input) {
+      return null;
+    }
+
+    const match = input.match(/(?:US\$|CA\$|C\$|A\$|\$|£|€)\s*\d[\d,]*(?:\.\d{2})?/i);
+    return match ? normalizeWhitespace(match[0]) : null;
+  }
+
+  function findPriceNearLabel(documentRoot, labelPatterns) {
+    const nodes = documentRoot.querySelectorAll("tr, li, p, div, span");
+
+    for (const node of nodes) {
+      const text = normalizeWhitespace(node.textContent);
+      if (!text) {
+        continue;
+      }
+
+      const isMatch = labelPatterns.some((pattern) => pattern.test(text));
+      if (!isMatch) {
+        continue;
+      }
+
+      const nearbyTexts = [
+        text,
+        node.nextElementSibling ? normalizeWhitespace(node.nextElementSibling.textContent) : "",
+        node.parentElement ? normalizeWhitespace(node.parentElement.textContent) : "",
+      ];
+
+      for (const nearbyText of nearbyTexts) {
+        const price = extractCurrencyPrice(nearbyText);
+        if (price) {
+          return price;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  function findPriceInBodyText(bodyText, labelPatterns) {
+    if (!bodyText) {
+      return null;
+    }
+
+    const matches = [
+      /(?:US\$|CA\$|C\$|A\$|\$|£|€)\s*\d[\d,]*(?:\.\d{2})?/i,
+    ];
+
+    for (const pattern of labelPatterns) {
+      const source = pattern.source;
+      const flags = pattern.flags.includes("i") ? pattern.flags : `${pattern.flags}i`;
+      const combined = new RegExp(`${source}.{0,120}${matches[0].source}`, flags);
+      const segment = bodyText.match(combined);
+      if (segment) {
+        const price = extractCurrencyPrice(segment[0]);
+        if (price) {
+          return price;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  function parseLowestPricesFromCamelHtml(html) {
+    const parser = new DOMParser();
+    const parsed = parser.parseFromString(html, "text/html");
+
+    const amazonLabelPatterns = [/\blowest\b.*\bamazon\b/i, /\bamazon\b.*\blowest\b/i];
+    const thirdPartyLabelPatterns = [
+      /\blowest\b.*\b(?:3rd|third)\s*party\b.*\bnew\b/i,
+      /\b(?:3rd|third)\s*party\b.*\bnew\b.*\blowest\b/i,
+      /\blowest\b.*\bnew\b.*\b(?:3rd|third)\s*party\b/i,
+    ];
+
+    const bodyText = normalizeWhitespace(parsed.body ? parsed.body.textContent : html);
+
+    const lowestAmazon =
+      findPriceNearLabel(parsed, amazonLabelPatterns) ||
+      findPriceInBodyText(bodyText, amazonLabelPatterns);
+
+    const lowestThirdPartyNew =
+      findPriceNearLabel(parsed, thirdPartyLabelPatterns) ||
+      findPriceInBodyText(bodyText, thirdPartyLabelPatterns);
+
+    return {
+      lowestAmazon: lowestAmazon || null,
+      lowestThirdPartyNew: lowestThirdPartyNew || null,
+    };
+  }
+
+  function fetchCamelPage(camelUrl) {
+    return new Promise((resolve, reject) => {
+      if (typeof GM_xmlhttpRequest === "function") {
+        GM_xmlhttpRequest({
+          method: "GET",
+          url: camelUrl,
+          timeout: 10000,
+          onload: (response) => {
+            if (response.status >= 200 && response.status < 400) {
+              resolve(response.responseText || "");
+              return;
+            }
+
+            reject(new Error(`Camel request failed with status ${response.status}`));
+          },
+          onerror: () => {
+            reject(new Error("Camel request failed"));
+          },
+          ontimeout: () => {
+            reject(new Error("Camel request timed out"));
+          },
+        });
+
+        return;
+      }
+
+      fetch(camelUrl)
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error(`Camel request failed with status ${response.status}`);
+          }
+
+          return response.text();
+        })
+        .then(resolve)
+        .catch(reject);
+    });
+  }
+
   function getInjectionTarget() {
     const preferredSelectors = [
       "#buybox",
@@ -242,6 +384,11 @@
     const root = document.createElement("div");
     root.id = ROOT_ID;
     root.style.marginTop = "10px";
+    root.style.padding = "10px";
+    root.style.border = "1px solid #b5d6ea";
+    root.style.borderRadius = "10px";
+    root.style.background = "linear-gradient(180deg, #f7fbff 0%, #eef7ff 100%)";
+    root.style.boxShadow = "0 1px 4px rgba(17, 24, 39, 0.08)";
 
     const link = document.createElement("a");
     link.id = LINK_ID;
@@ -258,18 +405,102 @@
     link.style.fontWeight = "700";
     link.style.fontSize = "13px";
     link.style.textDecoration = "none";
+    link.style.boxShadow = "0 1px 2px rgba(0, 0, 0, 0.12)";
 
     const sourceMeta = document.createElement("div");
     sourceMeta.id = SOURCE_ID;
-    sourceMeta.style.marginTop = "4px";
+    sourceMeta.style.marginTop = "6px";
     sourceMeta.style.fontSize = "11px";
     sourceMeta.style.color = "#565959";
     sourceMeta.textContent = `ASIN ${asin} (${source})`;
 
+    const amazonPrice = document.createElement("div");
+    amazonPrice.id = AMAZON_PRICE_ID;
+    amazonPrice.style.marginTop = "8px";
+    amazonPrice.style.fontSize = "12px";
+    amazonPrice.style.fontWeight = "700";
+    amazonPrice.style.color = "#0f5c39";
+    amazonPrice.style.background = "#eaf8f0";
+    amazonPrice.style.border = "1px solid #a9dbbf";
+    amazonPrice.style.borderRadius = "6px";
+    amazonPrice.style.padding = "6px 8px";
+    amazonPrice.textContent = "Best Amazon: loading...";
+
+    const thirdPartyPrice = document.createElement("div");
+    thirdPartyPrice.id = THIRD_PARTY_PRICE_ID;
+    thirdPartyPrice.style.marginTop = "6px";
+    thirdPartyPrice.style.fontSize = "12px";
+    thirdPartyPrice.style.fontWeight = "700";
+    thirdPartyPrice.style.color = "#0c4f78";
+    thirdPartyPrice.style.background = "#e9f4fb";
+    thirdPartyPrice.style.border = "1px solid #a7cee6";
+    thirdPartyPrice.style.borderRadius = "6px";
+    thirdPartyPrice.style.padding = "6px 8px";
+    thirdPartyPrice.textContent = "Best 3rd party new: loading...";
+
     root.appendChild(link);
     root.appendChild(sourceMeta);
+    root.appendChild(amazonPrice);
+    root.appendChild(thirdPartyPrice);
 
     return root;
+  }
+
+  function setLowestPriceLabels(prices) {
+    const root = document.getElementById(ROOT_ID);
+    if (!root) {
+      return;
+    }
+
+    const amazonLabel = root.querySelector(`#${AMAZON_PRICE_ID}`);
+    const thirdPartyLabel = root.querySelector(`#${THIRD_PARTY_PRICE_ID}`);
+
+    if (amazonLabel) {
+      amazonLabel.textContent = `Best Amazon: ${prices.lowestAmazon || "unavailable"}`;
+    }
+
+    if (thirdPartyLabel) {
+      thirdPartyLabel.textContent = `Best 3rd party new: ${prices.lowestThirdPartyNew || "unavailable"}`;
+    }
+  }
+
+  function setLowestPriceLoadingState() {
+    setLowestPriceLabels({
+      lowestAmazon: "loading...",
+      lowestThirdPartyNew: "loading...",
+    });
+  }
+
+  async function resolveAndRenderLowestPrices(camelUrl, requestId) {
+    const cacheHit = priceCache.get(camelUrl);
+    if (cacheHit) {
+      if (requestId === currentPriceRequestId) {
+        setLowestPriceLabels(cacheHit);
+      }
+
+      return;
+    }
+
+    setLowestPriceLoadingState();
+
+    try {
+      const html = await fetchCamelPage(camelUrl);
+      const parsed = parseLowestPricesFromCamelHtml(html);
+      priceCache.set(camelUrl, parsed);
+
+      if (requestId === currentPriceRequestId) {
+        setLowestPriceLabels(parsed);
+      }
+    } catch (error) {
+      log("Unable to fetch lowest prices", { camelUrl, error: String(error) });
+
+      if (requestId === currentPriceRequestId) {
+        setLowestPriceLabels({
+          lowestAmazon: "unavailable",
+          lowestThirdPartyNew: "unavailable",
+        });
+      }
+    }
   }
 
   function upsertButton(camelUrl, asin, source) {
@@ -312,6 +543,8 @@
   }
 
   function evaluatePage() {
+    const requestId = ++currentPriceRequestId;
+
     const marketplace = getMarketplaceConfig(window.location.hostname);
     if (!marketplace) {
       removeButton();
@@ -331,6 +564,7 @@
 
     if (success) {
       log("Button ready", { asin, source, camelUrl });
+      resolveAndRenderLowestPrices(camelUrl, requestId);
     }
   }
 
