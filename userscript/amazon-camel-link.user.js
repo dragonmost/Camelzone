@@ -1,9 +1,11 @@
 // ==UserScript==
 // @name         Camelzone
 // @namespace    https://github.com/Dragonmost/Camelzone
-// @version      0.3.0
+// @version      0.4.0
 // @description  Adds a CamelCamelCamel button on Amazon product pages.
 // @author       Dragonmost
+// @updateURL    https://raw.githubusercontent.com/Dragonmost/Camelzone/main/userscript/amazon-camel-link.user.js
+// @downloadURL  https://raw.githubusercontent.com/Dragonmost/Camelzone/main/userscript/amazon-camel-link.user.js
 // @match        https://www.amazon.ca/*
 // @match        https://amazon.ca/*
 // @match        https://www.amazon.com/*
