@@ -386,6 +386,7 @@
     const root = document.createElement("div");
     root.id = ROOT_ID;
     root.style.marginTop = "10px";
+    root.style.marginBottom = "10px";
     root.style.padding = "10px";
     root.style.border = "1px solid #b5d6ea";
     root.style.borderRadius = "10px";
