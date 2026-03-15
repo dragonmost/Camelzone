@@ -15,10 +15,9 @@ Version 1 scope:
 
 ## Automatic Install
 
-To install the script, click [here](https://github.com/dragonmost/Camelzone/raw/refs/heads/intsallation/userscript/amazon-camel-link.user.js).
+To install the script, click [here](https://github.com/dragonmost/Camelzone/raw/refs/heads/master/userscript/amazon-camel-link.user.js).
 
 ## Manual Install
-
 
 1. Install Tampermonkey in your browser.
 2. Open Tampermonkey dashboard.
