@@ -13,7 +13,12 @@ Version 1 scope:
 - Fetches and displays best historical Amazon and 3rd-party-new prices from CamelCamelCamel
 - Includes verbose debug logs in browser console
 
-## Install
+## Automatic Install
+
+To install the script, click [here](https://github.com/dragonmost/Camelzone/raw/refs/heads/intsallation/userscript/amazon-camel-link.user.js).
+
+## Manual Install
+
 
 1. Install Tampermonkey in your browser.
 2. Open Tampermonkey dashboard.
